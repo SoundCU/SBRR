@@ -1,0 +1,22 @@
+[LIB.SBRR.DEF]
+
+[07/20/2016 Blake Herring @ Sound Credit Union]
+
+[Consider this gpl. If you fix or change this, please share and don't try
+ to charge people for something you got for free.]
+
+ sbrrFlagReprint=number
+ sbrrSrcFileType="DATA"
+ sbrrSrcFileName=character (31)
+ 
+ sbrrArchFName=character
+ sbrrArchFNum=number
+ sbrrArchFErr=character
+ sbrrArchFoo=number
+ 
+ sbrrIdxFName=character
+ sbrrIdxFNum=number
+ sbrrIdxFErr=character
+ sbrrIdxFLine=character
+ 
+ sbrrTChr=character

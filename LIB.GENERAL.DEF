@@ -1,0 +1,51 @@
+[LIB.GENERAL.DEF]
+[Required : LIB.NULL.DEF]
+[Supports: LIB.GENERAL.PRO]
+
+libLength=number
+
+libNumber=number             
+libRate=rate
+libChar=character
+libDate=date
+libTime=number
+libMoney=money
+libHex=character(4)
+libFormat=character
+libBinary=number array (32)
+
+libDateStart=date
+libDateEnd=date
+
+libHexTab=character(1) array (16)
+
+libMonthChar=character array (12)
+
+libFlag=number     [use as boolean flag]
+libIndex=number    [use as index for counting, for loops, arrays, etc..]
+libI=number        [use as counter]
+libPoint=number    [use as an array pointer mostly]
+libBuff=character  [use as a small character buffer for copying, etc]
+
+libFlagList=number array (10)
+
+libRemoveChar=character(1) [for procedure libRemoveLeadChrs]
+libPadChar=character(1)
+
+libSearch=character
+libReplace=character
+
+libLineInput=character
+libReturnList=character array (50)
+libListDelimiter=character
+libListDelLen=number
+
+libKey=character array (20)
+libVal=character array (20)
+
+libDDAdvDirection=number
+libDDAdvStartDate=date
+libDDAdvFreq=number
+libDDAdvDay1=number
+libDDAdvDay2=number
+

@@ -1,0 +1,143 @@
+[LIB.SBRR.PRO]
+
+[07/20/2016 Blake Herring @ Sound Credit Union]
+
+[Consider this gpl. If you fix or change this, please share and don't try
+ to charge people for something you got for free.]
+
+PROCEDURE sbrrLOADRECEIPTARRAY
+[
+ Adapted from RD.SHAREDBRANCH.CUSTOMFORMS.PRO
+]
+ sbrrFlagReprint=@ENVPARAMNUMBER1
+ sbrrSrcFileName=@ENVPARAMCHAR1
+ 
+ sbrrArchFName=NULLCHR
+ 
+ if sbrrFlagReprint=true then do
+  FILEOPEN(sbrrSrcFileType,sbrrSrcFileName,"READ",SBRECEIPT,SBERROR)
+ end
+ else do
+  FILEOPEN("RECEIPT","","READ",SBRECEIPT,SBERROR)
+  
+  call sbrrOpenArchiveFile  
+ end
+ 
+ IF DEBUGMODE>0 THEN
+  CALL OPENDEBUGFILE
+
+ CALL sbrrGETNEXTLINE
+ POS=CHARACTERSEARCH(SBLINE,":")
+ CALL GETRECDATA
+ SBTITLE=RECDATA
+
+ CALL sbrrGETNEXTLINE
+ POS=CHARACTERSEARCH(SBLINE,":")
+ CALL GETRECDATA
+ SBFILETYPE=RECDATA
+
+ WHILE SBERROR="" AND SEGMENT(SBLINE,1,3)<>RECORDBREAK
+  DO
+   CALL sbrrGETNEXTLINE
+  END
+ CALL GETSECTION
+ CALL sbrrGETNEXTLINE
+ WHILE SBERROR=""
+  DO
+   WHILE SBERROR="" AND SEGMENT(SBLINE,1,3)<>RECORDBREAK
+    DO
+     CALL FINDTOKEN
+     IF INDEX>0 THEN
+      DO
+       IF SBTYPE=SBHEAD THEN
+        SBHEADER(INDEX)=RECDATA
+       IF SBTYPE=SBVER THEN
+        SBVERIFY(INDEX)=RECDATA
+       IF SBTYPE=SBBODY THEN
+        SBTRANBODY(SBBODYCOUNT,INDEX)=RECDATA
+       IF SBTYPE=SBPMT THEN
+        SBPAYMENT(SBBODYCOUNT,INDEX)=RECDATA
+       IF SBTYPE=SBGLCOMMENT THEN
+        SBGLTRAN1(SBGLCOUNT1,INDEX)=RECDATA
+       IF SBTYPE=SBGLACCT THEN
+        SBGLTRAN(SBGLCOUNT,INDEX)=RECDATA
+       IF SBTYPE=SBTRAIL THEN
+        SBTRAILER(INDEX)=RECDATA
+       IF SBTYPE=SBCHECK THEN
+        SBCHECKINFO(INDEX)=RECDATA
+       IF SBTYPE=SBADDRESS THEN
+        SBADDRESSINFO(INDEX)=RECDATA
+      END
+     CALL sbrrGETNEXTLINE
+    END
+   CALL GETSECTION
+   CALL sbrrGETNEXTLINE
+  END
+ FILECLOSE(SBRECEIPT,SBERROR)
+ FILECLOSE(DEBUGNUMBER,DEBUGERROR)
+ 
+ if SBFILETYPE="RECEIPT" then call sbrrAddArchFileToIndex
+END
+
+PROCEDURE sbrrGETNEXTLINE
+[
+ Adapted from RD.SHAREDBRANCH.CUSTOMFORMS.PRO
+]
+
+ FILEREADLINE(SBRECEIPT,SBLINE,SBERROR)
+ if sbrrFlagReprint=false then do
+  FILEWRITELINE(sbrrArchFNum,SBLINE,sbrrArchFErr)
+ end
+ 
+ IF DEBUGMODE>0 THEN
+  FILEWRITELINE(DEBUGNUMBER,SBLINE,DEBUGERROR)
+ WHILE SBERROR="" AND SBLINE=""
+  DO
+   FILEREADLINE(SBRECEIPT,SBLINE,SBERROR)
+   if sbrrFlagReprint=false then do
+    FILEWRITELINE(sbrrArchFNum,SBLINE,sbrrArchFErr)
+   end
+   IF DEBUGMODE>0 THEN
+    FILEWRITELINE(DEBUGNUMBER,SBLINE,DEBUGERROR)
+  END
+END
+
+PROCEDURE sbrrOpenArchiveFile
+ sbrrArchFoo=1
+ sbrrArchFName="SBRR."+FORMAT("9999.",SYSUSERNUMBER)+FORMAT("9999",FULLYEAR(SYSTEMDATE))+
+               FORMAT("99",MONTH(SYSTEMDATE))+FORMAT("99",DAY(SYSTEMDATE))+
+               FORMAT(".9999.",SYSACTUALTIME)+FORMAT("9999",SYSCONSOLENUM)+FORMAT(".9",sbrrArchFoo)
+               
+ FILEOPEN(sbrrSrcFileType,sbrrArchFName,"WRITE",sbrrArchFNum,sbrrArchFErr)
+ 
+ if sbrrArchFErr="File exists" then do  [if file already exists, adjust the name and try to open again]
+  sbrrArchFoo=sbrrArchFoo+1
+  sbrrArchFName="SBRR."+FORMAT("9999.",SYSUSERNUMBER)+FORMAT("9999",FULLYEAR(SYSTEMDATE))+
+                FORMAT("99",MONTH(SYSTEMDATE))+FORMAT("99",DAY(SYSTEMDATE))+
+                FORMAT(".9999.",SYSACTUALTIME)+FORMAT("9999",SYSCONSOLENUM)+FORMAT(".9",sbrrArchFoo)
+ 
+  FILEOPEN(sbrrSrcFileType,sbrrArchFName,"WRITE",sbrrArchFNum,sbrrArchFErr)
+ end
+ 
+END
+
+PROCEDURE sbrrAddArchFileToIndex
+ if sbrrFlagReprint=false and
+    sbrrSrcFileName=NULLCHR then do
+  sbrrIdxFName="SBRR.IDX."+FORMAT("9999.",SYSUSERNUMBER)+FORMAT("9999",FULLYEAR(SYSTEMDATE))+
+                FORMAT("99",MONTH(SYSTEMDATE))+FORMAT("99",DAY(SYSTEMDATE))
+  
+  FILEOPEN(sbrrSrcFileType,sbrrIdxFName,"APPEND",sbrrIdxFNum,sbrrIdxFErr)
+  
+  sbrrIdxFLine=FORMAT("9999",SYSUSERNUMBER)+"|"
+  sbrrIdxFLine=sbrrIdxFLine+SBHEADER(SBCUNAME)+"|"
+  sbrrIdxFLine=sbrrIdxFLine+SBVERIFY(SBUNMASKEDACCTNUM)+"|"
+  sbrrIdxFLine=sbrrIdxFLine+FORMAT("99:99",SYSACTUALTIME)+"|"
+  sbrrIdxFLine=sbrrIdxFLine+sbrrArchFName
+  
+  FILEWRITELINE(sbrrIdxFNum,sbrrIdxFLine,sbrrIdxFErr)
+  
+  FILECLOSE(sbrrIdxFNum,sbrrIdxFErr)
+ end
+END
+

@@ -1,0 +1,54 @@
+[SBRR.EOD.CLEAR]
+
+[07/20/2016 Blake Herring @ Sound Credit Union]
+
+[Consider this gpl. If you fix or change this, please share and don't try
+ to charge people for something you got for free.]
+
+[Should be part of nightly batch processing to clear out the day's activity.]
+
+
+TARGET=ACCOUNT
+
+DEFINE
+ #INCLUDE "LIB.NULL.DEF"
+ true=1
+ false=0
+ 
+ #INCLUDE "LIB.SBRR.DEF"
+ 
+ fListName=character
+ fListErr=character
+ 
+ fileList=character array (99999)
+ fIdx=number
+ i=number
+ 
+END
+
+SELECT
+ NONE
+END
+
+PRINT TITLE="SBRR EOD CLEAR"
+ fIdx=0
+ FILELISTOPEN(sbrrSrcFileType,"SBRR.+",fListErr)
+ while fListErr=NULLCHR do
+  FILELISTREAD(fListName,fListErr)
+  if fListName<>NULLCHR then do
+   fIdx=fIdx+1
+   fileList(fIdx)=fListName
+  end
+ end
+ 
+ if fIdx>0 then do
+  for i=1 to fIdx do
+   fListName=fileList(i)
+   FILEDELETE(sbrrSrcFileType,fListName,fListErr)
+   print fListName
+   if fListErr=NULLCHR then col=040 "deleted"
+   else col=040 "error: "+fListErr
+   newline
+  end
+ end
+END

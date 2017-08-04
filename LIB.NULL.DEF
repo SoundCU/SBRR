@@ -1,0 +1,14 @@
+[LIB.NULL.DEF]
+
+[
+ Defines NULL as a constant for all data types. 
+]
+
+ NULLDATE='--/--/--'
+ NULLNUM=0
+ NULLCHR=""
+ NULLRATE=0.00%
+ NULLFLOAT=0.00
+ NULLMONEY=$0.00
+ 
+ 

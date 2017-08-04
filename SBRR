@@ -1,0 +1,167 @@
+[SBRR]
+
+[07/20/2016 Blake Herring @ Sound Credit Union]
+
+[Consider this gpl. If you fix or change this, please share and don't try
+ to charge people for something you got for free.]
+
+[This needs to be run as OnDemand from Teller Tran screen, NOT Shared Branch screen.
+The program is meant to mimic the look and feel of the RR transaction us much as possible.]
+
+CUSTOMFORMSWINDOWS
+
+TARGET=ACCOUNT
+
+DEFINE
+ #INCLUDE "LIB.NULL.DEF"
+ true=1
+ false=0
+ #INCLUDE "LIB.SBRR.DEF"
+ #INCLUDE "LIB.GENERAL.DEF"
+ 
+ userNum=number
+ 
+ rLstCUName=character array (999)
+ rLstAcct=character array (999)
+ rLstTime=character array (999)
+ rLstFName=character array (999)
+ rIdx=number
+ r=number
+ rPtr=number
+ 
+ formRetLine=character
+ lim=number
+
+ subErr=character
+ flagCancel=number
+END
+
+SETUP
+ call GetUserNumber
+ 
+ sbrrIdxFName="SBRR.IDX."+FORMAT("9999.",userNum)+FORMAT("9999",FULLYEAR(SYSTEMDATE))+
+               FORMAT("99",MONTH(SYSTEMDATE))+FORMAT("99",DAY(SYSTEMDATE))
+ 
+[
+ sbrrIdxFName=character
+ sbrrIdxFNum=number
+ sbrrIdxFErr=character
+ sbrrIdxFLine=character
+] 
+ rIdx=0
+ FILEOPEN(sbrrSrcFileType,sbrrIdxFName,"READ",sbrrIdxFNum,sbrrIdxFErr)
+ if sbrrIdxFErr<>NULLCHR then do
+  call ErrorNoReceipts
+ end
+ 
+ while sbrrIdxFErr=NULLCHR do
+  FILEREADLINE(sbrrIdxFNum,sbrrIdxFLine,sbrrIdxFErr)
+  
+  if sbrrIdxFLine<>NULLCHR then do
+   libListDelimiter="|"
+   libLineInput=sbrrIdxFLine
+   call libParseLineInput
+   if libReturnList(1)=FORMAT("9999",userNum) then do
+    rIdx=rIdx+1
+    rLstCUName(rIdx)=libReturnList(2)
+    rLstAcct(rIdx)=libReturnList(3)
+    rLstTime(rIdx)=libReturnList(4)
+    rLstFName(rIdx)=libReturnList(5)
+   end
+  end
+ end
+ FILECLOSE(sbrrIdxFNum,sbrrIdxFErr)
+ 
+ if rIdx=0 then call ErrorNoReceipts
+ 
+ HTMLVIEWOPEN
+ HTMLVIEWLINE("<HTML>")
+ HTMLVIEWLINE("<STYLE>")
+ HTMLVIEWLINE("body  {font: 18px Arial, sans-serif;}")
+ HTMLVIEWLINE("table {font: 14px Arial, sans-serif;}")
+ HTMLVIEWLINE("hr    {color: #CCC; height 1; text-align: left; margin-top: 0; margin-botton: 0}")
+ HTMLVIEWLINE("</STYLE>")
+ HTMLVIEWLINE("<BODY BGCOLOR=WHITE TOPMARGIN=15 LEFTMARGIN=15>")
+ HTMLVIEWLINE("<FORM NAME="+CTRLCHR(34)+"Form1"+CTRLCHR(34)+" ACTION="+CTRLCHR(34)+"symitar://HTMLView~Action=Post"+CTRLCHR(34)+" METHOD="+CTRLCHR(34)+"POST"+CTRLCHR(34)+">")
+ HTMLVIEWLINE("<INPUT TYPE="+CTRLCHR(34)+"HIDDEN"+CTRLCHR(34)+" NAME="+CTRLCHR(34)+"RPOS"+CTRLCHR(34)+" VALUE="+CTRLCHR(34)+""+CTRLCHR(34)+">")
+ HTMLVIEWLINE("<TABLE CELLSPACING=0 CELLPADDING=2 WIDTH=650>")
+ HTMLVIEWLINE("<TR BGCOLOR="+CTRLCHR(34)+"#EEEEFF"+CTRLCHR(34)+">")
+ HTMLVIEWLINE("<TD><B>Receipt</B></TD>")
+ HTMLVIEWLINE("<TD><B>User</B></TD>")
+ HTMLVIEWLINE("<TD><B>Institution</B></TD>")
+ HTMLVIEWLINE("<TD><B>Account</B></TD>")
+ HTMLVIEWLINE("<TD><B>Time</B></TD>")
+ HTMLVIEWLINE("</TR> ")
+ for r=1 to rIdx do
+  HTMLVIEWLINE("<TR>")
+  HTMLVIEWLINE(" <TD><input name=selReceipt type=submit value="+CTRLCHR(34)+FORMAT("999",r)+CTRLCHR(34)+"</TD>")
+  HTMLVIEWLINE(" <TD>"+FORMAT("9999",userNum)+"</TD>")
+  HTMLVIEWLINE(" <TD>"+rLstCUName(r)+"</TD>")
+  HTMLVIEWLINE(" <TD>"+rLstAcct(r)+"</TD>")
+  HTMLVIEWLINE(" <TD>"+rLstTime(r)+"</TD>")
+  HTMLVIEWLINE("</TR>")
+ end
+ HTMLVIEWLINE("<TR>")
+ HTMLVIEWLINE(" <TD colspan=5><input name=cancel type=submit value='Cancel'></TD>")
+ HTMLVIEWLINE("</TR>")
+ HTMLVIEWLINE("</TABLE>")
+ HTMLVIEWLINE("</FORM>")
+ HTMLVIEWLINE("</BODY>")
+ HTMLVIEWLINE("</HTML>")
+ HTMLVIEWDISPLAY
+ 
+ rPtr=0
+ lim=0
+ flagCancel=false
+ formRetLine=NULLCHR
+ while formRetLine<>"EOD" and lim<10 do
+  formRetLine=ENTERLINE(0)
+  lim=lim+1
+  
+  libListDelimiter="="
+  libLineInput=formRetLine
+  call libParseLineInput
+  
+  if libReturnList(1)="selReceipt" then do
+   rPtr=VALUE(libReturnList(2))
+  end
+  else if libReturnList(1)="cancel" then do
+   flagCancel=true
+  end
+ end 
+ 
+ if flagCancel=false then do
+  if rPtr=0 or rPtr>rIdx then do
+   POPUPMESSAGE(2,"No Receipt Selected") 
+   TERMINATE
+  end
+  else do
+   INITSUBROUTINE(subErr)
+   @ENVARGCHAR1=rLstFName(rPtr)
+   @ENVARGNUMBER1=true
+   EXECUTE("SHAREDBRANCH.CUSTOMFORMS",subErr)
+   TERMINATE
+  end
+ end
+ 
+END
+
+PRINT TITLE="SBRR"
+ SUPPRESS 1
+END
+
+PROCEDURE GetUserNumber
+ DIALOGSTART("Shared Branch Reprint Receipt",200%,0)
+ DIALOGINTROTEXT("Enter Teller Number")
+ DIALOGPROMPTCODE("User List: ",9999,SYSUSERNUMBER)
+ DIALOGDISPLAY
+ userNum=ENTERCODE("User List: ",9999,SYSUSERNUMBER)
+ DIALOGCLOSE
+END
+
+PROCEDURE ErrorNoReceipts
+ POPUPMESSAGE(1,"No receipts found for User "+FORMAT("9999",userNum))
+ TERMINATE
+END
+
+ #INCLUDE "LIB.GENERAL.PRO" 
